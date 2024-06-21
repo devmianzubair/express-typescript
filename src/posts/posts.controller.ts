@@ -1,8 +1,9 @@
 import * as express from 'express';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Controller from '../interfaces/controller.interface';
 import IPost from './post.interface';
 import postModel from './posts.model';
+import PostNotFoundException from '../exceptions/PostNotFoundException';
 
 class PostsController implements Controller {
   public path = '/posts';
@@ -22,49 +23,54 @@ class PostsController implements Controller {
   }
 
   index = (request: Request, response: Response) => {
-    this.post.find()
-             .then(posts => {
-               response.send(posts);
-             });
-  }
+    this.post.find().then((posts) => {
+      response.send(posts);
+    });
+  };
 
   create = (request: Request, response: Response) => {
     const postData: IPost = request.body;
     const newPost = new this.post(postData);
-    newPost.save()
-           .then((savedPost) => {
-             response.send(savedPost);
-           });
-  }
+    newPost.save().then((savedPost) => {
+      response.send(savedPost);
+    });
+  };
 
-  show = (request: Request, response: Response) => {
+  show = (request: Request, response: Response, next: NextFunction) => {
     const id = request.params.id;
-    this.post.findById(id)
-             .then((post) => {
-               response.send(post);
-             });
-  }
+    this.post.findById(id).then((post) => {
+      if (post) {
+        response.send(post);
+      } else {
+        next(new PostNotFoundException(id));
+      }
+    });
+  };
 
-  update = (request: Request, response: Response) => {
+  update = (request: Request, response: Response, next: NextFunction) => {
     const id = request.params.id;
     const postData: IPost = request.body;
-    this.post.findByIdAndUpdate(id, postData, { new: true })
-             .then((updatedPost) => {
-               response.send(updatedPost);
-             });
-  }
+    this.post
+      .findByIdAndUpdate(id, postData, { new: true })
+      .then((post) => {
+        if (post) {
+          response.send(post);
+        } else {
+          next(new PostNotFoundException(id));
+        }
+      });
+  };
 
-  delete = (request: Request, response: Response) => {
+  delete = (request: Request, response: Response, next: NextFunction) => {
     const id = request.params.id;
-    this.post.findByIdAndDelete(id)
-             .then((successResponse) => {
-               if (successResponse) {
-                 response.sendStatus(200);
-               } else {
-                 response.sendStatus(404);
-               }
-             });
-  }
+    this.post.findByIdAndDelete(id).then((successResponse) => {
+      if (successResponse) {
+        response.sendStatus(200);
+      } else {
+        next(new PostNotFoundException(id));
+      }
+    });
+  };
 }
 
 export default PostsController;
