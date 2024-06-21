@@ -9,7 +9,6 @@ const app = new App(
   [
     new PostsController(),
   ],
-  parseInt(process.env.PORT),
 );
 
 app.listen();
